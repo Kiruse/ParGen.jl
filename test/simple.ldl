@@ -1,0 +1,6 @@
+-> root ->
+root -> <root-value, root-nested, root-or, root-and>
+root-nested: '(' root ')'
+root-or:  root '|' root
+root-and: root '&' root
+root-value: <[01]+>

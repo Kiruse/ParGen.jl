@@ -1,0 +1,110 @@
+# Pargen ldl language definition (aka LDLLD)
+# Copyright (c) Skye Cobile 2020 Germany
+# SEE LICENSE IN LICENSE
+# ------------------------------------------
+# This language definition primarily serves as reference point for interested individuals.
+
+-> root ->
+root -> blankline -> root
+root -> commentline -> root
+root -> <rule> -> opt-ws comment? -> nl[] -> root
+
+
+# Rule definitions
+rule:      <rule-custom-charset>
+rule:      <rule-name> colon <rule-def>
+rule-name: <uL[]+uN[]*>
+rule-def:  <pattern-or>, <pattern-and>, <pattern>
+
+# Patterns
+pattern: <rule-name> <mult-optional>
+pattern: <rule-name> <mult-0toinf>
+pattern: <rule-name> <mult-1toinf>
+pattern: <rule-name> <mult-minmax>
+pattern: <pattern-paran>
+pattern: <pattern-capture>
+pattern: <string>
+pattern: <charset>
+pattern: <rule-name>
+
+pattern-and:   <pattern> (rule-chain <pattern>)+
+pattern-or:    <pattern> (rule-paral <pattern>)+
+pattern-paran: '(' opt-ws rule-def opt-ws ')'
+pattern-capture: '<' opt-ws rule-def opt-ws '>'
+
+# String pattern definitions
+string: string-single, string-double, string-literal
+
+string-single:  "'" <string-single-part>* "'"
+string-single-part: <string-single-content, string-single-escape>
+string-single-content: <~[\\']+>
+
+string-double:  '"' (string-double-content | string-double-escapes)* '"'
+string-double-part: <string-double-content, string-double-escape>
+string-double-content: <~[\\"]+>
+
+string-literal: '`' <~[`]*> '`'
+
+# Custom character set definition
+rule-custom-charset: <rule-name> '[]' colon <charset>
+
+# Character set usage
+charset: <charset> <charset-union> <charset>
+charset: <charset> <charset-diff> <charset>
+charset: <charset-negate> <charset>
+charset: <named-charset>, <unnamed-charset>
+charset-negate: '~'
+charset-union: opt-ws '+' opt-ws
+charset-diff:  opt-ws `\` opt-ws
+named-charset: <unicode-charrange> '[]'
+named-charset: <rule-name> '[]'
+unnamed-charset: '[' opt-ws <unnamed-charset-value>+ opt-ws ']'
+unnamed-charset-value: <charrange, charrange-char, charrange-escape, string-literal>
+
+# Character range usage
+charrange: charrange-char '-' charrange-char
+charrange-char: <~[`\[]-`\`]>   # Everything except literal string quote, escape character & charset brackets
+
+# Unicode character sets (by categories)
+unicode-charset: 'u' <'C'> <[cfos]>?
+unicode-charset: 'u' <'L'> <[lmotu]>?
+unicode-charset: 'u' <'M'> <[cen]>?
+unicode-charset: 'u' <'N'> <[dlo]>?
+unicode-charset: 'u' <'P'> <[cdefios]>?
+unicode-charset: 'u' <'S'> <[ckmo]>?
+unicode-charset: 'u' <'Z'> <[lps]>?
+
+# Unicode character range
+unicode-charrange: 'u+' <[0-9]{4}> ('-' <[0-9]{4}>)?
+
+# Multiplicity usage
+mult-subject:  <charset>, <rule-name>
+mult-optional: '?'
+mult-0toinf:   '*'
+mult-1toinf:   '+'
+mult-minmax:   '{' opt-ws <[0-9]+> (comma <[0-9]+>)? opt-ws '}'
+
+# Escapes
+charrange-escape:     escape | `\` <'`'>
+string-single-escape: escape | `\` <"'">
+string-double-escape: escape | `\` <'"'>
+escape: `\` <[rnt0\\]>
+escape: `\` <unicode-charset, unicode-charrange>
+
+
+# Symbols
+rule-chain: opt-ws '->' opt-ws
+rule-chain: min-ws
+rule-paral: comma, pipe
+colon: opt-ws ':'  opt-ws
+comma: opt-ws ',' opt-ws
+pipe:  opt-ws '|' opt-ws
+
+# Misc. definitions
+blankline: opt-ws nl[]
+opt-ws: ws[]*
+min-ws: ws[]+
+
+# Comment definitions
+commentline: comment nl[] # Comment does not consume the newline
+comment: '#' ~nl[]        # We don't care about the actual comment text
